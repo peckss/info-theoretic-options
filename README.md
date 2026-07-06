@@ -133,16 +133,16 @@ Three regimes:
 - **Short-dated (~30d): market less fearful than the 20-year base rate.**
   Market prices essentially zero probability of a 10% monthly drop against
   a long-run base rate of 3.5%. Consistent with the current low-volatility
-  regime (ATM IV around 17.6%); short-dated options price the regime, not
-  the long-run mixture.
+  regime (ATM IV around 17.6%); short-dated options, rather than the
+  long-run mixture, price the regime.
 - **Intermediate (60–90d): market and history agree to within 0.5pp.** Not
   where the market charges meaningful risk premium for routine drawdowns.
 - **Long-dated (180–365d): market prices 1–3pp above history.** The
   variance risk premium concentrates here, where the market has to price
   in regime change, recessions, election cycles, and other slow-moving
-  catalysts the recent environment doesn't reflect.
+  catalysts that the recent environment doesn't reflect.
 
-The sign flip across maturities is the headline. "Market prices fear above
+The sign flip across maturities is the main finding. "Market prices fear above
 history" holds only at intermediate-to-long horizons; at short horizons it
 reverses, and at moderate horizons the two are essentially equal.
 
@@ -150,15 +150,15 @@ reverses, and at moderate horizons the two are essentially equal.
 
 The MaxEnt solve diverged on raw market quotes. Real option mids aren't
 perfectly arbitrage-free, and hard-equality entropy maximization has no
-solution when the constraints are mutually inconsistent. What worked:
+solution when the constraints are mutually inconsistent. Preprocessing that fixed it:
 
 1. **OTM options only** (puts below the forward, calls above). ITM quotes
-   are wide and illiquid; their mids distort the recovery.
+   have wider spreads and less liquidity; their mids distort the recovery.
 2. **Convert OTM puts to call-equivalent prices via put-call parity**.
-   Parity is a no-arbitrage identity, so the conversion is model-free.
+   Parity is a no-arbitrage identity, so this step doesn't rely on any model.
 3. **Invert to implied volatility, fit a smooth smile (quadratic in
    log-moneyness), regenerate clean Black-Scholes prices on an even strike
-   grid.** The smile fit averages out quote noise and enforces internal
+   grid.** The smile fit averages out noise and increases internal
    consistency.
 4. **MaxEnt on the smoothed prices.** Repricing RMSE drops from roughly
    $1,500 on raw quotes to under $0.001 with this preprocessing.
@@ -198,27 +198,27 @@ driver, change tickers, or run the offline synthetic-market validation.
   20 years that include calm and stressed periods; the current regime is
   one draw from that mixture, not the average. The short-maturity gap
   partly reflects this. A regime-matched historical window (filtering on
-  VIX, trend, macro conditions) would tighten the comparison but is a
+  VIX, trend, macro conditions) would tighten the comparison but would be a
   separate project.
 - **No historical time series of the gap.** yfinance only serves current
   option chains; a weekly history of the market-vs-history gap requires a
   paid or registered historical-options source (Polygon.io, OptionMetrics).
-  The term-structure analysis is the within-snapshot version. Porting to
-  Polygon is straightforward: the recovery code is unchanged, only
-  `load_real_market` needs a new data backend.
-- **Skewness magnitude depends on left-tail extrapolation.** The sign of
-  the skew is robust and reproduces a documented feature of equity-index
+  The term-structure analysis is what can be obtained from a single snapshot.
+  Swapping in a Polygon backend would only require changes to `load_real_market`,
+  with the rest of the recovery code staying the same.
+- **Skewness magnitude depends on left-tail extrapolation.** The negative sign of
+  the skew and reproduces a documented feature of equity-index
   options; the precise value of −1.86 will move with the smile-fit window
-  and entropy prior. A quantile-based skew measure would be more robust.
-- **Quadratic smile fit is the simplest reasonable choice.** SVI or SSVI
+  and entropy prior. A quantile-based skew measure would be less sensitive to this.
+- **Quadratic smile fit is the simplest option that works.** SVI or SSVI
   parametrizations are the industry standard and would extrapolate the
   wings more reliably, especially at longer maturities where OTM quote
   counts thin out (the 178d and 359d runs use ~66 quotes, vs ~200 for
   shorter maturities).
-- **MaxEnt with hard equality constraints is brittle to arbitrage-
-  violating inputs.** The smile-fit step is what makes it work on live
-  data; without it the optimizer diverges. A relaxed formulation (entropy
-  plus an L2 penalty on price errors) would degrade more gracefully.
+- **MaxEnt breaks on inputs that violate no-arbitrage.** The smile-fit step
+  is what makes it work on live data; without it the optimizer diverges.
+  A relaxed formulation (entropy plus an L2 penalty on price errors) would degrade
+  more gracefully.
 
 ## References
 
